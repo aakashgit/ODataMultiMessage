@@ -1,0 +1,9 @@
+Create a interface with importing cx_root and exception busi. and raise busi inside it implementing in the DPC for all single exceptions.
+    "Set system variables for this message
+    cl_message_helper=>set_msg_vars_for_clike( text = |{ ix_exception->get_text( ) }| ).
+
+    RAISE EXCEPTION TYPE /iwbep/cx_mgw_busi_exception
+      EXPORTING
+        textid = VALUE #( msgid = sy-msgid
+                          msgno = sy-msgno
+                          attr1 = sy-msgv1 ).
