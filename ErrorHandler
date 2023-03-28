@@ -114,7 +114,7 @@ sap.ui.define([
 			const msgType = {
 				error: MessageType.Error,
 				warning: MessageType.Warning,
-				information: MessageType.Information,
+				info: MessageType.Information,
 				success: MessageType.Success
 			};
 
