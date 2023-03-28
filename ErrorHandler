@@ -123,6 +123,9 @@ sap.ui.define([
 			multiMessage.forEach((messageline) => {
 				let type = "";
 				const message = messageline.message;
+				if(message === "An exception was raised"){
+					return;
+				}
 				multiMessages.push({
 					type: msgType[messageline.severity] === undefined ? MessageType.Error : msgType[messageline.severity], //Get message type
 					description: message
