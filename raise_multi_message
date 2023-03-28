@@ -1,0 +1,35 @@
+    class-methods HANDLE_EXCEPTION
+    importing
+      !IX_EXCEPTION type ref to CX_ROOT optional
+      !IO_ODATA_CONTEXT type ref to /IWBEP/IF_MGW_CONTEXT optional
+      !IT_BAPIRET2 type BAPIRET2_T optional
+    raising
+      /IWBEP/CX_MGW_BUSI_EXCEPTION
+      /IWBEP/CX_MGW_TECH_EXCEPTION .
+      
+      
+  METHOD handle_exception.
+    "Raise single message based on CX_ROOT
+    IF ix_exception IS BOUND.
+      "Set system variables for this message
+      cl_message_helper=>set_msg_vars_for_clike( text = |{ ix_exception->get_text( ) }| ).
+
+      RAISE EXCEPTION TYPE /iwbep/cx_mgw_busi_exception
+        EXPORTING
+          textid = VALUE #( msgid = sy-msgid
+                            msgno = sy-msgno
+                            attr1 = sy-msgv1 ).
+    ENDIF.
+    "Raise multiple messages from bapi return
+    IF io_odata_context IS BOUND AND
+       it_bapiret2[] IS NOT INITIAL.
+      "Add incoming message to the container
+      DATA(lo_msg_cont) = io_odata_context->get_message_container( ). "Get Message container
+      lo_msg_cont->add_messages_from_bapi( it_bapi_messages = it_bapiret2 ).
+
+      "First message is passed like a header message.
+       RAISE EXCEPTION TYPE /iwbep/cx_mgw_busi_exception
+          EXPORTING
+            message_container = lo_msg_cont.
+    ENDIF.
+  ENDMETHOD.
