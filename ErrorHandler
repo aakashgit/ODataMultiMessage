@@ -22,14 +22,14 @@ sap.ui.define([
 ], function (UI5Object, MessageBox, MessageType, MessageItem, MessageView, JSONModel, Dialog, Button, Bar, Text, Link) {
 	"use strict";
 
-	return UI5Object.extend("codan.requisition.nonstock.controller.ErrorHandler", {
+	return UI5Object.extend("test.controller.ErrorHandler", {
 
 		/**
 		 * Handles application errors by automatically attaching to the model events and displaying errors when needed.
 		 * @class
 		 * @param {sap.ui.core.UIComponent} oComponent reference to the app's component
 		 * @public
-		 * @alias codan.requisition.nonstock.controller.ErrorHandler
+		 * @alias test.controller.ErrorHandler
 		 */
 		constructor: function (oComponent) {
 			this.Parent = oComponent;
@@ -79,6 +79,7 @@ sap.ui.define([
 				//Show Multiples messages
 				this._showMultipleMessages(multiMessage);
 			} else {
+				//Default message for anything else.
 				MessageBox.error(
 					sDetails, {
 						id: "serviceErrorMessageBox",
@@ -108,7 +109,7 @@ sap.ui.define([
 			);
 		},
 		/**
-		 * Shows multi messages using Message view
+		 * Shows multi messages using Message view - THis can be replaced by other types of Message options.
 		 */
 		_showMultipleMessages(multiMessage, Parent) {
 			const msgType = {
@@ -118,7 +119,7 @@ sap.ui.define([
 				success: MessageType.Success
 			};
 
-			//Return multiple messages
+			//Get Multiple messages to json format from SAP strc.
 			const multiMessages = [];
 			multiMessage.forEach((messageline) => {
 				let type = "";
@@ -136,6 +137,7 @@ sap.ui.define([
 			this._openMessageView(multiMessages);
 		},
 		_openMessageView(multiMessages) {
+			//Message view template
 			const oMessageTemplate = new MessageItem({
 				type: '{type}',
 				title: '{description}',
@@ -144,7 +146,7 @@ sap.ui.define([
 			 const oModel = new JSONModel();
 
 			oModel.setData(multiMessages);
-			//Messageview
+			//Messageview instantiate
 			this.oMessageView = new MessageView({
 				showDetailsPageHeader: false,
 				itemSelect: function () {
@@ -156,6 +158,7 @@ sap.ui.define([
 				}
 			});
 			
+			"Back button for when the messages are long
 			const oBackButton = new Button({
 				icon: sap.ui.core.IconPool.getIconURI("nav-back"),
 				visible: false,
@@ -167,9 +170,10 @@ sap.ui.define([
 					this.setVisible(false);
 				}
 			});
-
+			//Set model to messageview
 			this.oMessageView.setModel(oModel);
-
+			
+			//Open dialog to show message view
 			this.oDialog = new Dialog({
 				resizable: true,
 				content: this.oMessageView,
@@ -192,7 +196,7 @@ sap.ui.define([
 				contentWidth: "500px",
 				verticalScrolling: false
 			});
-
+			//Open dialog
 			this.oDialog.open();
 		}
 	});
