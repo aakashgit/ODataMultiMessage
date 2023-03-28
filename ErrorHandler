@@ -22,14 +22,14 @@ sap.ui.define([
 ], function (UI5Object, MessageBox, MessageType, MessageItem, MessageView, JSONModel, Dialog, Button, Bar, Text, Link) {
 	"use strict";
 
-	return UI5Object.extend("test.controller.ErrorHandler", {
+	return UI5Object.extend("codan.requisition.nonstock.controller.ErrorHandler", {
 
 		/**
 		 * Handles application errors by automatically attaching to the model events and displaying errors when needed.
 		 * @class
 		 * @param {sap.ui.core.UIComponent} oComponent reference to the app's component
 		 * @public
-		 * @alias test.controller.ErrorHandler
+		 * @alias codan.requisition.nonstock.controller.ErrorHandler
 		 */
 		constructor: function (oComponent) {
 			this.Parent = oComponent;
@@ -67,30 +67,24 @@ sap.ui.define([
 				return;
 			}
 			this._bMessageOpen = true;
+			try {
+				//Get the incomming messages
+				const responseObject = JSON.parse(sDetails.responseText);
+				const multiMessage = responseObject.error.innererror.errordetails;
+				if (multiMessage.length > 0 && multiMessage.length <= 1) {
+					const singleMessage = multiMessage[0].message;
+					//Show the single message
+					this._showSingleError(singleMessage);
+				} else if (multiMessage.length > 1) {
+					//Show Multiples messages
+					this._showMultipleMessages(multiMessage);
+				} else {
+					this._showSingleError(sDetails);
+				}
 
-			//Get the incomming messages
-			const responseObject = JSON.parse(sDetails.responseText);
-			const multiMessage = responseObject.error.innererror.errordetails;
-			if (multiMessage.length > 0 && multiMessage.length <= 1) {
-				const singleMessage = multiMessage[0].message;
-				//Show the single message
-				this._showSingleError(singleMessage);
-			} else if (multiMessage.length > 1) {
-				//Show Multiples messages
-				this._showMultipleMessages(multiMessage);
-			} else {
-				//Default message for anything else.
-				MessageBox.error(
-					sDetails, {
-						id: "serviceErrorMessageBox",
-						details: sDetails,
-						styleClass: this._oComponent.getContentDensityClass(),
-						actions: [MessageBox.Action.CLOSE],
-						onClose: function () {
-							this._bMessageOpen = false;
-						}.bind(this)
-					}
-				);
+			} catch (err) {
+				//Give generic error				
+				this._showGenericError(sDetails);
 			}
 		},
 		/**
@@ -108,10 +102,25 @@ sap.ui.define([
 				}
 			);
 		},
+		
+		_showGenericError(message) {
+			MessageBox.error(
+				this._sErrorText,
+				{
+					id : "serviceErrorMessageBox",
+					details : message,
+					styleClass : this._oComponent.getContentDensityClass(),
+					actions : [MessageBox.Action.CLOSE],
+					onClose : function () {
+						this._bMessageOpen = false;
+					}.bind(this)
+				}
+			);
+		},		
 		/**
-		 * Shows multi messages using Message view - THis can be replaced by other types of Message options.
+		 * Shows multi messages using Message view
 		 */
-		_showMultipleMessages(multiMessage, Parent) {
+		_showMultipleMessages(multiMessage) {
 			const msgType = {
 				error: MessageType.Error,
 				warning: MessageType.Warning,
@@ -119,12 +128,12 @@ sap.ui.define([
 				success: MessageType.Success
 			};
 
-			//Get Multiple messages to json format from SAP strc.
+			//Return multiple messages
 			const multiMessages = [];
 			multiMessage.forEach((messageline) => {
 				let type = "";
 				const message = messageline.message;
-				if(message === "An exception was raised"){
+				if (message === "An exception was raised") {
 					return;
 				}
 				multiMessages.push({
@@ -137,16 +146,15 @@ sap.ui.define([
 			this._openMessageView(multiMessages);
 		},
 		_openMessageView(multiMessages) {
-			//Message view template
 			const oMessageTemplate = new MessageItem({
 				type: '{type}',
 				title: '{description}',
 			});
 
-			 const oModel = new JSONModel();
+			const oModel = new JSONModel();
 
 			oModel.setData(multiMessages);
-			//Messageview instantiate
+			//Messageview
 			this.oMessageView = new MessageView({
 				showDetailsPageHeader: false,
 				itemSelect: function () {
@@ -157,23 +165,21 @@ sap.ui.define([
 					template: oMessageTemplate
 				}
 			});
-			
-			"Back button for when the messages are long
+
 			const oBackButton = new Button({
 				icon: sap.ui.core.IconPool.getIconURI("nav-back"),
 				visible: false,
 				press: function () {
-				    const content = this.getParent().getParent().getContent();
-				    if(content.length > 0){
-				    	content[0].navigateBack();
-				    }
+					const content = this.getParent().getParent().getContent();
+					if (content.length > 0) {
+						content[0].navigateBack();
+					}
 					this.setVisible(false);
 				}
 			});
-			//Set model to messageview
+
 			this.oMessageView.setModel(oModel);
-			
-			//Open dialog to show message view
+
 			this.oDialog = new Dialog({
 				resizable: true,
 				content: this.oMessageView,
@@ -193,10 +199,9 @@ sap.ui.define([
 					contentLeft: [oBackButton]
 				}),
 				contentHeight: "300px",
-				contentWidth: "500px",
-				verticalScrolling: false
+				contentWidth: "500px"
 			});
-			//Open dialog
+
 			this.oDialog.open();
 		}
 	});
