@@ -1,0 +1,11 @@
+  METHOD compcodeset_get_entityset.
+*-- Get Company code list
+    TRY.
+        et_entityset = zcl_nonstock_req_api=>get_purchasing_data( ).
+      CATCH cx_root INTO DATA(lx_root).
+        zcl_odata_service_helper=>handle_exception( ix_exception = lx_root ).
+                                    (or)
+        zcl_odata_service_helper=>handle_exception( IO_ODATA_CONTEXT = mo_context
+                                                    it_bapiret2      = <bapi_return / multiples messages in the format of bapiretun ) )
+    ENDTRY.
+  ENDMETHOD.
