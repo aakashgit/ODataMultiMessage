@@ -183,7 +183,10 @@ sap.ui.define([
 			});
 
 			this.oMessageView.setModel(oModel);
-
+			//This is to make sure to set the flag that the dialog is not open
+			const dialogNotOpen = () => {
+				this._bMessageOpen = false;
+			}
 			this.oDialog = new Dialog({
 				resizable: true,
 				content: this.oMessageView,
@@ -191,6 +194,7 @@ sap.ui.define([
 				beginButton: new Button({
 					press: function () {
 						this.getParent().close();
+						dialogNotOpen.call(this);
 					},
 					text: "Close"
 				}),
@@ -203,7 +207,8 @@ sap.ui.define([
 					contentLeft: [oBackButton]
 				}),
 				contentHeight: "300px",
-				contentWidth: "500px"
+				contentWidth: "500px",
+				verticalScrolling: false
 			});
 
 			this.oDialog.open();
