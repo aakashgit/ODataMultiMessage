@@ -79,7 +79,11 @@ sap.ui.define([
 					//Show Multiples messages
 					this._showMultipleMessages(multiMessage);
 				} else {
-					this._showSingleError(sDetails);
+					if(responseObject.error.message.value){
+						this._showSingleError(responseObject.error.message.value);
+					}else{
+						this._showGenericError(sDetails);
+					}
 				}
 
 			} catch (err) {
