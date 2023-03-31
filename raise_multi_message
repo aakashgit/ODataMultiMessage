@@ -18,7 +18,10 @@
         EXPORTING
           textid = VALUE #( msgid = sy-msgid
                             msgno = sy-msgno
-                            attr1 = sy-msgv1 ).
+                            attr1 = sy-msgv1
+                            attr2 = sy-msgv2
+                            attr3 = sy-msgv3
+                            attr4 = sy-msgv4 ).                            
     ENDIF.
     "Raise multiple messages from bapi return
     IF io_odata_context IS BOUND AND
