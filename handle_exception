@@ -1,0 +1,40 @@
+  METHOD handle_exception.
+    FIELD-SYMBOLS: <lt_return> TYPE bapiret2_t.
+    "Raise single message based on CX_ROOT
+    IF ix_exception IS BOUND.
+      "Check if multiple messages are available
+      TRY.
+          ASSIGN ('ix_exception->messages[]') TO <lt_return>.
+        CATCH cx_root INTO DATA(lo_root).
+          "If multiple messages not available continue with single exception
+      ENDTRY.
+
+      IF <lt_return> IS ASSIGNED.
+        "Raise BAPI Message
+        _raise_bapi_exception( it_bapimsg   = <lt_return>
+                               io_context   = io_odata_context
+                               iv_long_text = abap_true ).
+      ENDIF.
+      "Set system variables for this message
+      cl_message_helper=>set_msg_vars_for_clike( text = |{ ix_exception->get_text( ) }| ).
+
+      "Raise single exception when bapi msg fails or not relevant
+      RAISE EXCEPTION TYPE /iwbep/cx_mgw_busi_exception
+        EXPORTING
+          textid = VALUE #( msgid = sy-msgid
+                            msgno = sy-msgno
+                            attr1 = sy-msgv1
+                            attr2 = sy-msgv2
+                            attr3 = sy-msgv3
+                            attr4 = sy-msgv4 ).
+    ENDIF.
+
+    "Raise multiple messages from bapi return
+    IF it_bapiret2[] IS NOT INITIAL.
+      "Raise BAPI Message
+      "WHen we need long text, catch relevant exception and send as bapireturn
+      _raise_bapi_exception( it_bapimsg   = it_bapiret2
+                             io_context   = io_odata_context
+                             iv_long_text = abap_true ).
+    ENDIF.
+  ENDMETHOD.
