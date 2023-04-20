@@ -3,7 +3,8 @@
     TRY.
         et_entityset = zcl_nonstock_req_api=>get_purchasing_data( ).
       CATCH cx_root INTO DATA(lx_root).
-        zcl_odata_service_helper=>handle_exception( ix_exception = lx_root ).
+        zcl_odata_service_helper=>handle_exception( IO_ODATA_CONTEXT = mo_context 
+                                                    ix_exception = lx_root ). "This will also handle multiple messages but without HTML longtext (when mo_context is passed)
                                     (or)
         zcl_odata_service_helper=>handle_exception( IO_ODATA_CONTEXT = mo_context
                                                     it_bapiret2      = <bapi_return / multiples messages in the format of bapiretun ) )
