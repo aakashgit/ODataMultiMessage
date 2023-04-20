@@ -18,25 +18,23 @@ sap.ui.define([
 	"sap/m/Dialog",
 	"sap/m/Button",
 	"sap/m/Bar",
-	"sap/m/Text"
-], function (UI5Object, MessageBox, MessageType, MessageItem, MessageView, JSONModel, Dialog, Button, Bar, Text) {
+	"sap/m/Text",
+	"sap/ui/core/message/Message",
+	"sap/ui/core/message/ControlMessageProcessor",
+	"sap/ui/core/Core"	
+], function (Object, MessageBox, MessageType, MessageItem, MessageView, JSONModel, Dialog, Button, Bar, Text, Message, ControlMessageProcessor, Core) {
 	"use strict";
-
-	return UI5Object.extend("message.controller.ErrorHandler", {
-
-		/**
-		 * Handles application errors by automatically attaching to the model events and displaying errors when needed.
-		 * @class
-		 * @param {sap.ui.core.UIComponent} oComponent reference to the app's component
-		 * @public
-		 * @alias message.controller.ErrorHandler
-		 */
+	return Object.extend("XXXXX.libraries.controls.ErrorHandler", {
 		constructor: function (oComponent, models) {
 			this.Parent = oComponent;
 			this._oResourceBundle = oComponent.getModel("i18n").getResourceBundle();
 			this._oComponent = oComponent;
 			this._bMessageOpen = false;
 			this._sErrorText = this._oResourceBundle.getText("errorText");
+			// //Initiate message manager
+			this.messageProcessor = new ControlMessageProcessor();
+			this.messageManager = Core.getMessageManager();
+			this.messageManager.registerMessageProcessor(this.messageProcessor);			
 
 			const attachModel = (model) => {
 				model.attachMetadataFailed(function (oEvent) {
@@ -68,6 +66,7 @@ sap.ui.define([
 		 * @private
 		 */
 		_showServiceError: function (sDetails) {
+			this.messageManager.removeAllMessages(); //remove previous messages
 			if (this._bMessageOpen) {
 				return;
 			}
@@ -79,14 +78,22 @@ sap.ui.define([
 				//Convert to internal format
 				const multiMessages = this._convertMultiMessage(multiMessage);
 				if (multiMessages.length > 0 && multiMessages.length <= 1) {
-					const singleMessage = multiMessages[0].description;
+					const singleMessage = multiMessages[0].message;
 					//Show the single message
 					this._showSingleError(singleMessage);
 				} else if (multiMessages.length > 1) {
-					//Show Multiples messages
-					this._showMultipleMessages(multiMessages);
+					//Show Multiples messages - from message manager
+					this._showMultipleMessages();
 				} else {
 					if (responseObject.error.message.value) {
+						//Add messages to the message manager incase if it was used
+						this.messageManager.addMessages(
+							new Message({
+								type: MessageType.Error,
+								message: responseObject.error.message.value,
+								processor: this.messageProcessor
+							}));	
+						//Show popup	
 						this._showSingleError(responseObject.error.message.value);
 					} else {
 						this._showGenericError(sDetails);
@@ -147,9 +154,19 @@ sap.ui.define([
 				if (message === "An exception was raised") {
 					return;
 				}
+				//Add messages to the message manager incase if it was used
+				this.messageManager.addMessages(
+					new Message({
+						type: msgType[messageline.severity] === undefined ? MessageType.Error : msgType[messageline.severity], //Get message type
+						message: message,
+						code: messageline.code,
+						additionalText: messageline.propertyref, //making use of this field for grouping
+						description: messageline.target, //making use of this field for long text
+						processor: this.messageProcessor
+					}));				
 				multiMessages.push({
 					type: msgType[messageline.severity] === undefined ? MessageType.Error : msgType[messageline.severity], //Get message type
-					description: message
+					message: message
 				});
 			});
 
@@ -158,15 +175,16 @@ sap.ui.define([
 		/**
 		 * Shows multi messages using Message view
 		 */
-		_showMultipleMessages(multiMessages) {
+		_showMultipleMessages() {
 			const oMessageTemplate = new MessageItem({
 				type: '{type}',
-				title: '{description}',
+				title: '{message}',
+				subtitle: '{code}',
+				description: '{description}',
+				markupDescription: true,
+				groupName: '{additionalText}'				
 			});
-
-			const oModel = new JSONModel();
-
-			oModel.setData(multiMessages);
+			
 			//Messageview
 			this.oMessageView = new MessageView({
 				showDetailsPageHeader: false,
@@ -176,7 +194,8 @@ sap.ui.define([
 				items: {
 					path: "/",
 					template: oMessageTemplate
-				}
+				},
+				groupItems: true
 			});
 
 			const oBackButton = new Button({
@@ -191,7 +210,7 @@ sap.ui.define([
 				}
 			});
 
-			this.oMessageView.setModel(oModel);
+			this.oMessageView.setModel(this.messageManager.getMessageModel());
 			const dialogNotOpen = () => {
 				this._bMessageOpen = false;
 			};
