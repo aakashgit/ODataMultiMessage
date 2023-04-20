@@ -1,0 +1,93 @@
+  METHOD _raise_bapi_exception.
+    DATA: lt_longtext TYPE STANDARD TABLE OF bapitgb,
+          lv_longtext TYPE string,
+          lv_msg      TYPE bapiret2-message.
+
+
+    IF it_bapimsg[] IS INITIAL.
+      RETURN.
+    ENDIF.
+
+    "If there is only one message, give regular exception
+    DATA(ls_msg) = it_bapimsg[ 1 ].
+    IF lines( it_bapimsg ) = 1 OR io_context IS NOT BOUND.
+      IF ls_msg-id IS NOT INITIAL.
+        RAISE EXCEPTION TYPE /iwbep/cx_mgw_busi_exception
+          EXPORTING
+            textid = VALUE #( msgid = ls_msg-id
+                              msgno = ls_msg-number
+                              attr1 = ls_msg-message_v1
+                              attr2 = ls_msg-message_v2
+                              attr3 = ls_msg-message_v3
+                              attr4 = ls_msg-message_v4 ).
+      ELSE.
+        "Raise single message
+        _raise_single_exception( ls_msg-message ).
+      ENDIF.
+    ENDIF.
+
+    IF io_context IS NOT BOUND.
+      RETURN.
+    ENDIF.
+    "If there are multiple messages and context is provided raise to containder
+    "Raise multiple messages from bapi return
+    "Add incoming message to the container
+    DATA(lo_msg_cont) = io_context->get_message_container( ). "Get Message container
+
+    LOOP AT it_bapimsg ASSIGNING FIELD-SYMBOL(<ls_msg>).
+      "Add messages to the message container
+      IF <ls_msg>-message IS NOT INITIAL.
+        lv_msg = <ls_msg>-message.
+      ELSE.
+        MESSAGE ID <ls_msg>-id
+                TYPE <ls_msg>-type
+                NUMBER <ls_msg>-number
+                WITH <ls_msg>-message_v1 <ls_msg>-message_v2 <ls_msg>-message_v3 <ls_msg>-message_v4
+                INTO lv_msg.
+      ENDIF.
+      IF <ls_msg>-id IS NOT INITIAL AND iv_long_text = abap_true.
+        "Get long text in html format
+        CALL FUNCTION 'BAPI_MESSAGE_GETDETAIL'
+          EXPORTING
+            id         = <ls_msg>-id
+            number     = <ls_msg>-number
+            textformat = 'HTM'
+            message_v1 = <ls_msg>-message_v1
+            message_v2 = <ls_msg>-message_v2
+            message_v3 = <ls_msg>-message_v3
+            message_v4 = <ls_msg>-message_v4
+          IMPORTING
+            message    = lv_msg
+          TABLES
+            text       = lt_longtext.
+      ENDIF.
+
+      IF lt_longtext[] IS NOT INITIAL AND iv_long_text = abap_true.
+        LOOP AT lt_longtext ASSIGNING FIELD-SYMBOL(<ls_text>).
+          CONCATENATE lv_longtext <ls_text>-line INTO lv_longtext SEPARATED BY cl_abap_char_utilities=>newline.
+        ENDLOOP.
+      ENDIF.
+
+      lo_msg_cont->add_error_detail( EXPORTING is_error_detail = VALUE #( code = COND #( WHEN <ls_msg>-id IS NOT INITIAL
+                                                                                              THEN |{ <ls_msg>-id }/{ <ls_msg>-number }|
+                                                                                              ELSE space )
+                                                                          message_text = lv_msg
+                                                                          severity  = COND #( WHEN <ls_msg>-type = 'E' OR
+                                                                                                   <ls_msg>-type = 'A'
+                                                                                                   THEN 'error'
+                                                                                              WHEN <ls_msg>-type = 'S'
+                                                                                                   THEN 'success'
+                                                                                              WHEN <ls_msg>-type = 'W'
+                                                                                                   THEN 'warning'
+                                                                                              ELSE 'info' )
+                                                                          property_reference = <ls_msg>-field
+                                                                          target = lv_longtext ) ).
+    ENDLOOP.
+
+    "First message is passed like a header message.
+    RAISE EXCEPTION TYPE /iwbep/cx_mgw_busi_exception
+      EXPORTING
+        message_container = lo_msg_cont.
+
+
+  ENDMETHOD.
