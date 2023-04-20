@@ -24,7 +24,8 @@ sap.ui.define([
 			// //Initiate message manager
 			this.messageProcessor = new ControlMessageProcessor();
 			this.messageManager = Core.getMessageManager();
-			this.messageManager.registerMessageProcessor(this.messageProcessor);			
+			this.messageManager.registerMessageProcessor(this.messageProcessor);
+			this.markUpDescription = false; //By default disabling HTML content
 
 			const attachModel = (model) => {
 				model.attachMetadataFailed(function (oEvent) {
@@ -153,7 +154,10 @@ sap.ui.define([
 						additionalText: messageline.propertyref, //making use of this field for grouping
 						description: messageline.target, //making use of this field for long text
 						processor: this.messageProcessor
-					}));				
+					}));	
+				if(messageline.target){
+					this.markUpDescription = true;
+				}
 				multiMessages.push({
 					type: msgType[messageline.severity] === undefined ? MessageType.Error : msgType[messageline.severity], //Get message type
 					message: message
@@ -171,9 +175,11 @@ sap.ui.define([
 				title: '{message}',
 				subtitle: '{code}',
 				description: '{description}',
-				markupDescription: true,
 				groupName: '{additionalText}'				
 			});
+			
+			//This enables to show HTML content in detail page.
+			oMessageTemplate.setMarkupDescription(this.markUpDescription);
 			
 			//Messageview
 			this.oMessageView = new MessageView({
