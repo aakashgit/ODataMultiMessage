@@ -16,16 +16,21 @@ sap.ui.define([
 	"use strict";
 	return Object.extend("XXXXX.libraries.controls.ErrorHandler", {
 		constructor: function (oComponent, models) {
-			this.Parent = oComponent;
-			this._oResourceBundle = oComponent.getModel("i18n").getResourceBundle();
-			this._oComponent = oComponent;
-			this._bMessageOpen = false;
-			this._sErrorText = this._oResourceBundle.getText("errorText");
+			if (oComponent) {
+				this.Parent = oComponent;
+				this._oResourceBundle = oComponent.getModel("i18n").getResourceBundle();
+				this._oComponent = oComponent;
+				this._bMessageOpen = false;
+				this._sErrorText = this._oResourceBundle.getText("errorText");
+			}
 			// //Initiate message manager
 			this.messageProcessor = new ControlMessageProcessor();
 			this.messageManager = Core.getMessageManager();
 			this.messageManager.registerMessageProcessor(this.messageProcessor);
 			this.markUpDescription = false; //By default disabling HTML content
+			this.removeAllMessages = () => { //Exposed to be called from child projects
+				this.messageManager.removeAllMessages(); //remove all messages
+			};
 
 			const attachModel = (model) => {
 				model.attachMetadataFailed(function (oEvent) {
@@ -57,11 +62,6 @@ sap.ui.define([
 		 * @private
 		 */
 		_showServiceError: function (sDetails) {
-			this.messageManager.removeAllMessages(); //remove previous messages
-			if (this._bMessageOpen) {
-				return;
-			}
-			this._bMessageOpen = true;
 			try {
 				//Get the incomming messages
 				const responseObject = JSON.parse(sDetails.responseText);
@@ -83,7 +83,7 @@ sap.ui.define([
 								type: MessageType.Error,
 								message: responseObject.error.message.value,
 								processor: this.messageProcessor
-							}));	
+							}));
 						//Show popup	
 						this._showSingleError(responseObject.error.message.value);
 					} else {
@@ -100,6 +100,10 @@ sap.ui.define([
 		 * Shows a {@link sap.m.MessageBox} with sinle message
 		 */
 		_showSingleError(message) {
+			if (this._bMessageOpen) { //Dont show another popup when we already have one.
+				return;
+			}
+			this._bMessageOpen = true;
 			MessageBox.error(
 				message, {
 					id: "serviceErrorMessageBox",
@@ -113,6 +117,10 @@ sap.ui.define([
 		},
 
 		_showGenericError(message) {
+			if (this._bMessageOpen) { //Dont show another popup when we already have one.
+				return;
+			}
+			this._bMessageOpen = true;
 			MessageBox.error(
 				this._sErrorText, {
 					id: "serviceErrorMessageBox",
@@ -154,8 +162,8 @@ sap.ui.define([
 						additionalText: messageline.propertyref, //making use of this field for grouping
 						description: messageline.target, //making use of this field for long text
 						processor: this.messageProcessor
-					}));	
-				if(messageline.target){
+					}));
+				if (messageline.target) {
 					this.markUpDescription = true;
 				}
 				multiMessages.push({
@@ -170,17 +178,21 @@ sap.ui.define([
 		 * Shows multi messages using Message view
 		 */
 		_showMultipleMessages() {
+			if (this._bMessageOpen) { //Dont show another popup when we already have one.
+				return;
+			}
+			this._bMessageOpen = true;
 			const oMessageTemplate = new MessageItem({
 				type: '{type}',
 				title: '{message}',
 				subtitle: '{code}',
 				description: '{description}',
-				groupName: '{additionalText}'				
+				groupName: '{additionalText}'
 			});
-			
+
 			//This enables to show HTML content in detail page.
 			oMessageTemplate.setMarkupDescription(this.markUpDescription);
-			
+
 			//Messageview
 			this.oMessageView = new MessageView({
 				showDetailsPageHeader: false,
