@@ -28,10 +28,7 @@ sap.ui.define([
 			this.messageManager = Core.getMessageManager();
 			this.messageManager.registerMessageProcessor(this.messageProcessor);
 			this.markUpDescription = false; //By default disabling HTML content
-			this.removeAllMessages = () => { //Exposed to be called from child projects
-				this.messageManager.removeAllMessages(); //remove all messages
-			};
-
+			
 			const attachModel = (model) => {
 				model.attachMetadataFailed(function (oEvent) {
 					const oParams = oEvent.getParameters();
@@ -54,6 +51,15 @@ sap.ui.define([
 					attachModel(row);
 				});
 			}
+			
+			/*   Methods to be consumed by the calling Projects */
+			this.removeAllMessages = () => { //Exposed to be called from child projects
+				this.messageManager.removeAllMessages(); //remove all messages
+			};
+			//To open popover message view when Message handler footer button is clicked
+			this.onMessagesButtonPress = (evt, delegate) =>{
+				this._onMessagesButtonPress(evt, delegate);
+			};
 		},
 		/**
 		 * Shows a {@link sap.m.MessageBox} when a service call has failed.
@@ -247,6 +253,76 @@ sap.ui.define([
 			});
 
 			this.oDialog.open();
+		},
+		//Display message on click of messages button
+		_onMessagesButtonPress(evt, closeDelegate) {
+			this.description = "";
+
+			//Template for displaying the message
+			const oMessageTemplate = new MessageItem({
+				type: '{type}',
+				title: '{message}',
+				subtitle: '{code}',
+				description: '{description}',
+				markupDescription: true,
+				groupName: '{additionalText}'
+			});
+
+			//Messageview setup
+			this.oMessageView = new MessageView({
+				showDetailsPageHeader: false,
+				itemSelect: function (evt) {
+					oBackButton.setVisible(true);
+				}.bind(this),
+				items: {
+					path: "/",
+					template: oMessageTemplate
+				},
+				groupItems: true
+			});
+
+			this.oMessageView.setModel(this.messageManager.getMessageModel());
+
+			const oBackButton = new Button({
+				icon: IconPool.getIconURI("nav-back"),
+				visible: false,
+				press: function (evt) {
+					this.oMessageView.navigateBack();
+					this.oPopover.focus();
+					evt.getSource().setVisible(false);
+				}.bind(this)
+			});
+
+			const oCloseButton = new Button({
+					text: "Close",
+					press: function () {
+						this.oPopover.close();
+						if (closeDelegate) {
+							closeDelegate.call(this);
+						}
+					}.bind(this)
+				}).addStyleClass("sapUiTinyMarginEnd"),
+
+				oPopoverBar = new Bar({
+					contentLeft: [oBackButton],
+					contentMiddle: [
+						new Title({
+							text: "Messages"
+						})
+					]
+				});
+
+			this.oPopover = new ResponsivePopover({
+				customHeader: oPopoverBar,
+				contentWidth: "500px",
+				contentHeight: "40%",
+				verticalScrolling: false,
+				modal: true,
+				content: [this.oMessageView],
+				endButton: oCloseButton
+			});
+			//open popover
+			this.oPopover.openBy(evt.getSource());
 		}
 	});
 });
